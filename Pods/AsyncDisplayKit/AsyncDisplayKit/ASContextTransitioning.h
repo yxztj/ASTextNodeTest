@@ -10,10 +10,7 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import <AsyncDisplayKit/ASDimension.h>
-
-@class ASDisplayNode;
-@class ASLayout;
+#import <AsyncDisplayKit/ASDisplayNode.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

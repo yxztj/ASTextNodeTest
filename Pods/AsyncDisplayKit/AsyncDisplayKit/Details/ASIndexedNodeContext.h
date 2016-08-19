@@ -29,6 +29,4 @@
  */
 - (ASCellNode *)allocateNode;
 
-+ (NSArray<NSIndexPath *> *)indexPathsFromContexts:(NSArray<ASIndexedNodeContext *> *)contexts;
-
 @end

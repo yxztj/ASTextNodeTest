@@ -84,7 +84,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   id _downloadIdentifier;
   
   // Properties
-  ASDN::RecursiveMutex __instanceLock__;
+  ASDN::RecursiveMutex _propertyLock;
   BOOL _shouldRenderProgressImages;
   
   //set on init only
@@ -346,7 +346,7 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
 
 - (void)setShouldRenderProgressImages:(BOOL)shouldRenderProgressImages
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   if (shouldRenderProgressImages == _shouldRenderProgressImages) {
     return;
   }
@@ -354,13 +354,13 @@ typedef void(^ASMultiplexImageLoadCompletionBlock)(UIImage *image, id imageIdent
   _shouldRenderProgressImages = shouldRenderProgressImages;
   
   
-  ASDN::MutexUnlocker u(__instanceLock__);
+  ASDN::MutexUnlocker u(_propertyLock);
   [self _updateProgressImageBlockOnDownloaderIfNeeded];
 }
 
 - (BOOL)shouldRenderProgressImages
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _shouldRenderProgressImages;
 }
 

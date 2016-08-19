@@ -9,7 +9,6 @@
 //
 
 #pragma once
-#import <vector>
 
 @class ASIndexedNodeContext;
 
@@ -34,30 +33,20 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCellNode *> *nodes, NS
  */
 - (NSMutableArray *)completedNodesOfKind:(NSString *)kind;
 
-/**
- * Ensure that next time `itemCountsFromDataSource` is called, new values are retrieved.
- *
- * This must be called on the main thread.
- */
-- (void)invalidateDataSourceItemCounts;
-
-/**
- * Returns the most recently gathered item counts from the data source. If the counts
- * have been invalidated, this synchronously queries the data source and saves the result.
- *
- * This must be called on the main thread.
- */
-- (std::vector<NSInteger>)itemCountsFromDataSource;
-
 #pragma mark - Node sizing
 
 /**
  * Measure and layout the given nodes in optimized batches, constraining each to a given size in `constrainedSizeForNodeOfKind:atIndexPath:`.
- *
- * This method runs synchronously.
- * @param batchCompletion A handler to be run after each batch is completed. It is executed synchronously on the calling thread.
  */
-- (void)batchLayoutNodesFromContexts:(NSArray<ASIndexedNodeContext *> *)contexts batchCompletion:(ASDataControllerCompletionBlock)batchCompletionHandler;
+- (void)batchLayoutNodesFromContexts:(NSArray<ASIndexedNodeContext *> *)contexts ofKind:(NSString *)kind completion:(ASDataControllerCompletionBlock)completionBlock;
+
+/**
+ * Perform measurement and layout of loaded nodes on the main thread, skipping unloaded nodes.
+ *
+ * @discussion Once nodes have loaded their views, we can't layout in the background so this is a chance
+ * to do so immediately on the main thread.
+ */
+- (void)layoutLoadedNodes:(NSArray<ASCellNode *> *)nodes fromContexts:(NSArray<ASIndexedNodeContext *> *)contexts ofKind:(NSString *)kind;
 
 /**
  * Provides the size range for a specific node during the layout process.

@@ -10,8 +10,6 @@
 
 #import "ASAsciiArtBoxCreator.h"
 
-#import <tgmath.h>
-
 static const NSUInteger kDebugBoxPadding = 2;
 
 typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
@@ -71,7 +69,7 @@ typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
   
   for (NSString *child in children) {
     NSMutableArray *lines = [[child componentsSeparatedByString:@"\n"] mutableCopy];
-    NSUInteger topPadding = ceil((CGFloat)(lineCountPerChild - [lines count])/2.0);
+    NSUInteger topPadding = ceilf((CGFloat)(lineCountPerChild - [lines count])/2.0);
     NSUInteger bottomPadding = (lineCountPerChild - [lines count])/2.0;
     NSUInteger lineLength = [lines[0] length];
     
@@ -100,7 +98,7 @@ typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
   NSUInteger totalLineLength = [concatenatedLines[0] length];
   if (totalLineLength < [parent length]) {
     NSUInteger difference = [parent length] + (2 * kDebugBoxPadding) - totalLineLength;
-    NSUInteger leftPadding = ceil((CGFloat)difference/2.0);
+    NSUInteger leftPadding = ceilf((CGFloat)difference/2.0);
     NSUInteger rightPadding = difference/2;
     
     NSString *leftString = [@"|" debugbox_stringByAddingPadding:@" " count:leftPadding location:PIDebugBoxPaddingLocationEnd];
@@ -139,7 +137,7 @@ typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
   
   if (maxChildLength < [parent length]) {
     NSUInteger difference = [parent length] + (2 * kDebugBoxPadding) - maxChildLength;
-    leftPadding = ceil((CGFloat)difference/2.0);
+    leftPadding = ceilf((CGFloat)difference/2.0);
     rightPadding = difference/2;
   }
   
@@ -149,7 +147,7 @@ typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
   for (NSString *child in children) {
     NSMutableArray *lines = [[child componentsSeparatedByString:@"\n"] mutableCopy];
     
-    NSUInteger leftLinePadding = ceil((CGFloat)(maxChildLength - [lines[0] length])/2.0);
+    NSUInteger leftLinePadding = ceilf((CGFloat)(maxChildLength - [lines[0] length])/2.0);
     NSUInteger rightLinePadding = (maxChildLength - [lines[0] length])/2.0;
     
     for (NSString *line in lines) {
@@ -173,7 +171,7 @@ typedef NS_ENUM(NSUInteger, PIDebugBoxPaddingLocation)
   NSUInteger totalLineLength = [boxStrings[0] length];
   [boxStrings addObject:[NSString debugbox_stringWithString:@"-" repeatedCount:totalLineLength]];
   
-  NSUInteger leftPadding = ceil(((CGFloat)(totalLineLength - [parent length]))/2.0);
+  NSUInteger leftPadding = ceilf(((CGFloat)(totalLineLength - [parent length]))/2.0);
   NSUInteger rightPadding = (totalLineLength - [parent length])/2;
   
   NSString *topLine = [parent debugbox_stringByAddingPadding:@"-" count:leftPadding location:PIDebugBoxPaddingLocationFront];

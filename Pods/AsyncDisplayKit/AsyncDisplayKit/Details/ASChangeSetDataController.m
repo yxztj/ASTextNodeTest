@@ -13,7 +13,6 @@
 #import "ASChangeSetDataController.h"
 #import "_ASHierarchyChangeSet.h"
 #import "ASAssert.h"
-#import "ASDataController+Subclasses.h"
 
 @implementation ASChangeSetDataController {
   NSInteger _changeSetBatchUpdateCounter;
@@ -24,35 +23,32 @@
 
 - (void)beginUpdates
 {
-  ASDisplayNodeAssertMainThread();
+  // NOTE: This assertion is failing in some apps and will be enabled soon.
+//  ASDisplayNodeAssertMainThread();
   if (_changeSetBatchUpdateCounter <= 0) {
+    _changeSet = [_ASHierarchyChangeSet new];
     _changeSetBatchUpdateCounter = 0;
-    _changeSet = [[_ASHierarchyChangeSet alloc] initWithOldData:[self itemCountsFromDataSource]];
   }
   _changeSetBatchUpdateCounter++;
 }
 
 - (void)endUpdatesAnimated:(BOOL)animated completion:(void (^)(BOOL))completion
 {
-  ASDisplayNodeAssertMainThread();
+  // NOTE: This assertion is failing in some apps and will be enabled soon.
+//  ASDisplayNodeAssertMainThread();
   _changeSetBatchUpdateCounter--;
   
   // Prevent calling endUpdatesAnimated:completion: in an unbalanced way
-  NSAssert(_changeSetBatchUpdateCounter >= 0, @"endUpdatesAnimated:completion: called without having a balanced beginUpdates call");
+  // NOTE: This assertion is failing in some apps and will be enabled soon.
+//  NSAssert(_changeSetBatchUpdateCounter >= 0, @"endUpdatesAnimated:completion: called without having a balanced beginUpdates call");
   
   if (_changeSetBatchUpdateCounter == 0) {
-    if (!self.initialReloadDataHasBeenCalled) {
-      if (completion) {
-        completion(YES);
-      }
-      _changeSet = nil;
-      return;
-    }
-    
-    [self invalidateDataSourceItemCounts];
-    [_changeSet markCompletedWithNewItemCounts:[self itemCountsFromDataSource]];
+    [_changeSet markCompleted];
     
     [super beginUpdates];
+
+    NSAssert([_changeSet itemChangesOfType:_ASHierarchyChangeTypeReload].count == 0, @"Expected reload item changes to have been converted into insert/deletes.");
+    NSAssert([_changeSet sectionChangesOfType:_ASHierarchyChangeTypeReload].count == 0, @"Expected reload section changes to have been converted into insert/deletes.");
     
     for (_ASHierarchyItemChange *change in [_changeSet itemChangesOfType:_ASHierarchyChangeTypeDelete]) {
       [super deleteRowsAtIndexPaths:change.indexPaths withAnimationOptions:change.animationOptions];
@@ -84,51 +80,50 @@
   return batchUpdating;
 }
 
-- (void)waitUntilAllUpdatesAreCommitted
-{
-  ASDisplayNodeAssertMainThread();
-  if (self.batchUpdating) {
-    // This assertion will be enabled soon.
-//    ASDisplayNodeFailAssert(@"Should not call %@ during batch update", NSStringFromSelector(_cmd));
-    return;
-  }
-
-  [super waitUntilAllUpdatesAreCommitted];
-}
-
 #pragma mark - Section Editing (External API)
 
 - (void)insertSections:(NSIndexSet *)sections withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet insertSections:sections animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet insertSections:sections animationOptions:animationOptions];
+  } else {
+    [super insertSections:sections withAnimationOptions:animationOptions];
+  }
 }
 
 - (void)deleteSections:(NSIndexSet *)sections withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet deleteSections:sections animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet deleteSections:sections animationOptions:animationOptions];
+  } else {
+    [super deleteSections:sections withAnimationOptions:animationOptions];
+  }
 }
 
 - (void)reloadSections:(NSIndexSet *)sections withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet reloadSections:sections animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet reloadSections:sections animationOptions:animationOptions];
+  } else {
+    [self beginUpdates];
+    [super deleteSections:sections withAnimationOptions:animationOptions];
+    [super insertSections:sections withAnimationOptions:animationOptions];
+    [self endUpdates];
+  }
 }
 
 - (void)moveSection:(NSInteger)section toSection:(NSInteger)newSection withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet deleteSections:[NSIndexSet indexSetWithIndex:section] animationOptions:animationOptions];
-  [_changeSet insertSections:[NSIndexSet indexSetWithIndex:newSection] animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet deleteSections:[NSIndexSet indexSetWithIndex:section] animationOptions:animationOptions];
+    [_changeSet insertSections:[NSIndexSet indexSetWithIndex:newSection] animationOptions:animationOptions];
+  } else {
+    [super moveSection:section toSection:newSection withAnimationOptions:animationOptions];
+  }
 }
 
 #pragma mark - Row Editing (External API)
@@ -136,34 +131,45 @@
 - (void)insertRowsAtIndexPaths:(NSArray *)indexPaths withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet insertItems:indexPaths animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet insertItems:indexPaths animationOptions:animationOptions];
+  } else {
+    [super insertRowsAtIndexPaths:indexPaths withAnimationOptions:animationOptions];
+  }
 }
 
 - (void)deleteRowsAtIndexPaths:(NSArray *)indexPaths withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet deleteItems:indexPaths animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet deleteItems:indexPaths animationOptions:animationOptions];
+  } else {
+    [super deleteRowsAtIndexPaths:indexPaths withAnimationOptions:animationOptions];
+  }
 }
 
 - (void)reloadRowsAtIndexPaths:(NSArray *)indexPaths withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet reloadItems:indexPaths animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet reloadItems:indexPaths animationOptions:animationOptions];
+  } else {
+    [self beginUpdates];
+    [super deleteRowsAtIndexPaths:indexPaths withAnimationOptions:animationOptions];
+    [super insertRowsAtIndexPaths:indexPaths withAnimationOptions:animationOptions];
+    [self endUpdates];
+  }
 }
 
 - (void)moveRowAtIndexPath:(NSIndexPath *)indexPath toIndexPath:(NSIndexPath *)newIndexPath withAnimationOptions:(ASDataControllerAnimationOptions)animationOptions
 {
   ASDisplayNodeAssertMainThread();
-  [self beginUpdates];
-  [_changeSet deleteItems:@[indexPath] animationOptions:animationOptions];
-  [_changeSet insertItems:@[newIndexPath] animationOptions:animationOptions];
-  [self endUpdates];
+  if ([self batchUpdating]) {
+    [_changeSet deleteItems:@[indexPath] animationOptions:animationOptions];
+    [_changeSet insertItems:@[newIndexPath] animationOptions:animationOptions];
+  } else {
+    [super moveRowAtIndexPath:indexPath toIndexPath:newIndexPath withAnimationOptions:animationOptions];
+  }
 }
 
 @end

@@ -1,12 +1,12 @@
 PODS:
-  - AsyncDisplayKit (2.0-beta.1):
-    - AsyncDisplayKit/PINRemoteImage (= 2.0-beta.1)
-  - AsyncDisplayKit/ASDealloc2MainObject (2.0-beta.1)
-  - AsyncDisplayKit/Core (2.0-beta.1):
+  - AsyncDisplayKit (1.9.81):
+    - AsyncDisplayKit/PINRemoteImage (= 1.9.81)
+  - AsyncDisplayKit/ASDealloc2MainObject (1.9.81)
+  - AsyncDisplayKit/Core (1.9.81):
     - AsyncDisplayKit/ASDealloc2MainObject
-  - AsyncDisplayKit/PINRemoteImage (2.0-beta.1):
+  - AsyncDisplayKit/PINRemoteImage (1.9.81):
     - AsyncDisplayKit/Core
-    - PINRemoteImage/iOS (>= 3.0.0-beta.3)
+    - PINRemoteImage/iOS (>= 3.0.0-beta.2)
   - PINCache (3.0.1-beta)
   - PINRemoteImage/Core (3.0.0-beta.3):
     - PINCache (>= 3.0.0-beta)
@@ -14,23 +14,13 @@ PODS:
     - PINRemoteImage/Core
 
 DEPENDENCIES:
-  - AsyncDisplayKit (from `https://github.com/facebook/AsyncDisplayKit`, branch `master`)
-
-EXTERNAL SOURCES:
-  AsyncDisplayKit:
-    :branch: master
-    :git: https://github.com/facebook/AsyncDisplayKit
-
-CHECKOUT OPTIONS:
-  AsyncDisplayKit:
-    :commit: cbec803b3187dadcb9d746bdb04c972261f03273
-    :git: https://github.com/facebook/AsyncDisplayKit
+  - AsyncDisplayKit
 
 SPEC CHECKSUMS:
-  AsyncDisplayKit: 0bc09eccc8627e05983b89b9b01daf749c552eeb
+  AsyncDisplayKit: 011ea22a76a79a5bbfc14501fede6e0196a3c2f0
   PINCache: 6911fe422a633e18b3d3ddf2bd4f0e55e36e2892
   PINRemoteImage: 308731aa6534500e58fc211b9cc2bb7252df25ba
 
-PODFILE CHECKSUM: 3fec03ebd5e0f55b8784dc2abf6980df4b6b6b0c
+PODFILE CHECKSUM: 40513520e5deb6c4cd9e26f2e24b31093c708e89
 
 COCOAPODS: 1.0.1

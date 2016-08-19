@@ -9,7 +9,6 @@
 //
 
 #import "_ASDisplayView.h"
-#import "_ASDisplayViewAccessiblity.h"
 
 #import "_ASCoreAnimationExtras.h"
 #import "ASDisplayNodeInternal.h"
@@ -27,12 +26,9 @@
 @implementation _ASDisplayView
 {
   __unsafe_unretained ASDisplayNode *_node;  // Though UIView has a .node property added via category, since we can add an ivar to a subclass, use that for performance.
-
   BOOL _inHitTest;
   BOOL _inPointInside;
-
   NSArray *_accessibleElements;
-  CGRect _lastAccessibleElementsFrame;
 }
 
 @synthesize asyncdisplaykit_node = _node;
@@ -43,6 +39,10 @@
 }
 
 #pragma mark - NSObject Overrides
+- (instancetype)init
+{
+  return [self initWithFrame:CGRectZero];
+}
 
 - (NSString *)description
 {
@@ -52,6 +52,14 @@
 }
 
 #pragma mark - UIView Overrides
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  if (!(self = [super initWithFrame:frame]))
+    return nil;
+
+  return self;
+}
 
 - (void)willMoveToWindow:(UIWindow *)newWindow
 {
@@ -118,6 +126,7 @@
       [newSuperview.asyncdisplaykit_node addSubnode:_node];
     }
   }
+
 }
 
 - (void)didMoveToSuperview
@@ -160,29 +169,27 @@
   }
 }
 
-- (void)addSubview:(UIView *)view
-{
-  [super addSubview:view];
-  
-#ifndef ASDK_ACCESSIBILITY_DISABLE
-  self.accessibleElements = nil;
-#endif
-}
-
-- (void)willRemoveSubview:(UIView *)subview
-{
-  [super willRemoveSubview:subview];
-  
-#ifndef ASDK_ACCESSIBILITY_DISABLE
-  self.accessibleElements = nil;
-#endif
-}
-
 - (void)setNeedsDisplay
 {
-  ASDisplayNodeAssertMainThread();
   // Standard implementation does not actually get to the layer, at least for views that don't implement drawRect:.
-  [self.layer setNeedsDisplay];
+  if (ASDisplayNodeThreadIsMain()) {
+    [self.layer setNeedsDisplay];
+  } else {
+    dispatch_async(dispatch_get_main_queue(), ^ {
+      [self.layer setNeedsDisplay];
+    });
+  }
+}
+
+- (void)setNeedsLayout
+{
+  if (ASDisplayNodeThreadIsMain()) {
+    [super setNeedsLayout];
+  } else {
+    dispatch_async(dispatch_get_main_queue(), ^ {
+      [super setNeedsLayout];
+    });
+  }
 }
 
 - (UIViewContentMode)contentMode

@@ -43,9 +43,7 @@ static void ASRecursivelyUpdateMultidimensionalArrayAtIndexPaths(NSMutableArray 
       curIdx++;
     }
 
-    if (updateBlock){
-      updateBlock(mutableArray, indexSet, curIdx);
-    }
+    updateBlock(mutableArray, indexSet, curIdx);
   }
 }
 
@@ -173,10 +171,8 @@ NSArray *ASFindElementsInMultidimensionalArrayAtIndexPaths(NSMutableArray *mutab
 NSArray *ASIndexPathsForMultidimensionalArrayAtIndexSet(NSArray *multidimensionalArray, NSIndexSet *indexSet)
 {
   NSMutableArray *res = [NSMutableArray array];
-  [indexSet enumerateRangesUsingBlock:^(NSRange range, BOOL * _Nonnull stop) {
-    for (NSUInteger i = range.location; i < NSMaxRange(range); i++) {
-      ASRecursivelyFindIndexPathsForMultidimensionalArray(multidimensionalArray[i], [NSIndexPath indexPathWithIndex:i], res);
-    }
+  [indexSet enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
+    ASRecursivelyFindIndexPathsForMultidimensionalArray(multidimensionalArray[idx], [NSIndexPath indexPathWithIndex:idx], res);
   }];
 
   return res;

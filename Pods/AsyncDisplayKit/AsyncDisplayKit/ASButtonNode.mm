@@ -14,11 +14,12 @@
 #import "ASDisplayNode+Subclasses.h"
 #import "ASBackgroundLayoutSpec.h"
 #import "ASInsetLayoutSpec.h"
+#import "ASDisplayNode+Beta.h"
 #import "ASStaticLayoutSpec.h"
 
 @interface ASButtonNode ()
 {
-  ASDN::RecursiveMutex __instanceLock__;
+  ASDN::RecursiveMutex _propertyLock;
   
   NSAttributedString *_normalAttributedTitle;
   NSAttributedString *_highlightedAttributedTitle;
@@ -55,7 +56,7 @@
 - (instancetype)init
 {
   if (self = [super init]) {
-    self.automaticallyManagesSubnodes = YES;
+    self.usesImplicitHierarchyManagement = YES;
     
     _contentSpacing = 8.0;
     _laysOutHorizontally = YES;
@@ -146,7 +147,7 @@
 
 - (void)updateImage
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
 
   UIImage *newImage;
   if (self.enabled == NO && _disabledImage) {
@@ -169,7 +170,7 @@
 
 - (void)updateTitle
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   NSAttributedString *newTitle;
   if (self.enabled == NO && _disabledAttributedTitle) {
     newTitle = _disabledAttributedTitle;
@@ -183,7 +184,7 @@
     newTitle = _normalAttributedTitle;
   }
 
-  if ((_titleNode != nil || newTitle.length > 0) && [self.titleNode.attributedString isEqualToAttributedString:newTitle] == NO) {
+  if ((_titleNode != nil || newTitle.length > 0) && newTitle != self.titleNode.attributedString) {
     _titleNode.attributedString = newTitle;
     self.accessibilityLabel = _titleNode.accessibilityLabel;
     [self setNeedsLayout];
@@ -192,7 +193,7 @@
 
 - (void)updateBackgroundImage
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   
   UIImage *newImage;
   if (self.enabled == NO && _disabledBackgroundImage) {
@@ -215,13 +216,13 @@
 
 - (CGFloat)contentSpacing
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _contentSpacing;
 }
 
 - (void)setContentSpacing:(CGFloat)contentSpacing
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   if (contentSpacing == _contentSpacing)
     return;
   
@@ -231,13 +232,13 @@
 
 - (BOOL)laysOutHorizontally
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _laysOutHorizontally;
 }
 
 - (void)setLaysOutHorizontally:(BOOL)laysOutHorizontally
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   if (laysOutHorizontally == _laysOutHorizontally)
     return;
   
@@ -247,37 +248,37 @@
 
 - (ASVerticalAlignment)contentVerticalAlignment
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _contentVerticalAlignment;
 }
 
 - (void)setContentVerticalAlignment:(ASVerticalAlignment)contentVerticalAlignment
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   _contentVerticalAlignment = contentVerticalAlignment;
 }
 
 - (ASHorizontalAlignment)contentHorizontalAlignment
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _contentHorizontalAlignment;
 }
 
 - (void)setContentHorizontalAlignment:(ASHorizontalAlignment)contentHorizontalAlignment
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   _contentHorizontalAlignment = contentHorizontalAlignment;
 }
 
 - (UIEdgeInsets)contentEdgeInsets
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _contentEdgeInsets;
 }
 
 - (void)setContentEdgeInsets:(UIEdgeInsets)contentEdgeInsets
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   _contentEdgeInsets = contentEdgeInsets;
 }
 
@@ -298,7 +299,7 @@
 
 - (NSAttributedString *)attributedTitleForState:(ASControlState)state
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   switch (state) {
     case ASControlStateNormal:
       return _normalAttributedTitle;
@@ -322,7 +323,7 @@
 
 - (void)setAttributedTitle:(NSAttributedString *)title forState:(ASControlState)state
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   switch (state) {
     case ASControlStateNormal:
       _normalAttributedTitle = [title copy];
@@ -353,7 +354,7 @@
 
 - (UIImage *)imageForState:(ASControlState)state
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   switch (state) {
     case ASControlStateNormal:
       return _normalImage;
@@ -377,7 +378,7 @@
 
 - (void)setImage:(UIImage *)image forState:(ASControlState)state
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   switch (state) {
     case ASControlStateNormal:
       _normalImage = image;
@@ -407,7 +408,7 @@
 
 - (UIImage *)backgroundImageForState:(ASControlState)state
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   switch (state) {
     case ASControlStateNormal:
       return _normalBackgroundImage;
@@ -431,7 +432,7 @@
 
 - (void)setBackgroundImage:(UIImage *)image forState:(ASControlState)state
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   switch (state) {
     case ASControlStateNormal:
       _normalBackgroundImage = image;
@@ -465,7 +466,7 @@
   ASLayoutSpec *spec;
   ASStackLayoutSpec *stack = [[ASStackLayoutSpec alloc] init];
   {
-    ASDN::MutexLocker l(__instanceLock__);
+    ASDN::MutexLocker l(_propertyLock);
     stack.direction = _laysOutHorizontally ? ASStackLayoutDirectionHorizontal : ASStackLayoutDirectionVertical;
     stack.spacing = _contentSpacing;
     stack.horizontalAlignment = _contentHorizontalAlignment;

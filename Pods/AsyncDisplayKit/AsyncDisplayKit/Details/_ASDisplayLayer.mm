@@ -101,11 +101,18 @@
 #endif
 
 - (void)layoutSublayers
-{
-  ASDisplayNodeAssertMainThread();
+{ 
   [super layoutSublayers];
 
-  [self.asyncdisplaykit_node __layout];
+  ASDisplayNode *node = self.asyncdisplaykit_node;
+  if (ASDisplayNodeThreadIsMain()) {
+    [node __layout];
+  } else {
+    ASDisplayNodeFailAssert(@"not reached assertion");
+    dispatch_async(dispatch_get_main_queue(), ^ {
+      [node __layout];
+    });
+  }
 }
 
 - (void)setNeedsDisplay

@@ -21,6 +21,8 @@
 #import "ASLayoutTransition.h"
 #import "ASEnvironment.h"
 
+#include <vector>
+
 @protocol _ASDisplayLayerDelegate;
 @class _ASDisplayLayer;
 @class _ASPendingState;
@@ -59,7 +61,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   _ASPendingState *_pendingViewState;
 
   // Protects access to _view, _layer, _pendingViewState, _subnodes, _supernode, and other properties which are accessed from multiple threads.
-  ASDN::RecursiveMutex __instanceLock__;
+  ASDN::RecursiveMutex _propertyLock;
   UIView *_view;
   CALayer *_layer;
 
@@ -83,10 +85,10 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
     
     // Prevent calling setNeedsDisplay on a layer that backs a UIImageView. Usually calling setNeedsDisplay on a CALayer
     // triggers a recreation of the contents of layer unfortunately calling it on a CALayer that backs a UIImageView
-    // it goes through the normal flow to assign the contents to a layer via the CALayerDelegate methods. Unfortunately
+    // it goes trough the normal flow to assign the contents to a layer via the CALayerDelegate methods. Unfortunately
     // UIImageView does not do recreate the layer contents the usual way, it actually does not implement some of the
     // methods at all instead it throws away the contents of the layer and nothing will show up.
-    unsigned canCallSetNeedsDisplayOfLayer:1;
+    unsigned canCallNeedsDisplayOfLayer:1;
 
     // whether custom drawing is enabled
     unsigned implementsInstanceDrawRect:1;
@@ -114,18 +116,15 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   CGFloat _contentsScaleForDisplay;
 
   ASEnvironmentState _environmentState;
-  ASLayout *_calculatedLayout;
+  ASLayout *_layout;
 
 
   UIEdgeInsets _hitTestSlop;
   NSMutableArray *_subnodes;
   
   // Main thread only
-  _ASTransitionContext *_pendingLayoutTransitionContext;
-  BOOL _automaticallyManagesSubnodes;
-  NSTimeInterval _defaultLayoutTransitionDuration;
-  NSTimeInterval _defaultLayoutTransitionDelay;
-  UIViewAnimationOptions _defaultLayoutTransitionOptions;
+  _ASTransitionContext *_transitionContext;
+  BOOL _usesImplicitHierarchyManagement;
 
   int32_t _pendingTransitionID;
   ASLayoutTransition *_pendingLayoutTransition;

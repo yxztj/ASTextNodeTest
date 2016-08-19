@@ -8,14 +8,11 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-
-#import "ASTextKitFontSizeAdjuster.h"
-
-#import <tgmath.h>
-#import <mutex>
-
 #import "ASTextKitContext.h"
+#import "ASTextKitFontSizeAdjuster.h"
 #import "ASLayoutManager.h"
+
+#import <mutex>
 
 //#define LOG(...) NSLog(__VA_ARGS__)
 #define LOG(...)
@@ -51,7 +48,7 @@
   [attrString enumerateAttributesInRange:NSMakeRange(0, attrString.length) options:0 usingBlock:^(NSDictionary<NSString *,id> * _Nonnull attrs, NSRange range, BOOL * _Nonnull stop) {
     if (attrs[NSFontAttributeName] != nil) {
       UIFont *font = attrs[NSFontAttributeName];
-      font = [font fontWithSize:std::round(font.pointSize * scaleFactor)];
+      font = [font fontWithSize:roundf(font.pointSize * scaleFactor)];
       [attrString removeAttribute:NSFontAttributeName range:range];
       [attrString addAttribute:NSFontAttributeName value:font range:range];
     }
@@ -169,7 +166,7 @@
           // adjust here so we start at the proper place in our scale array if we have too many lines
           scaleIndex++;
           
-          if (std::ceil(longestWordSize.width * [scaleFactor floatValue])  <= _constrainedSize.width) {
+          if (ceilf(longestWordSize.width * [scaleFactor floatValue])  <= _constrainedSize.width) {
             // we fit! we are done
             break;
           }

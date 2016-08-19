@@ -24,7 +24,6 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
     unsigned int delegateNeededDefaultControls:1;
     unsigned int delegateCustomControls:1;
     unsigned int delegateSpinnerTintColor:1;
-    unsigned int delegateSpinnerStyle:1;
     unsigned int delegatePlaybackButtonTint:1;
     unsigned int delegateScrubberMaximumTrackTintColor:1;
     unsigned int delegateScrubberMinimumTrackTintColor:1;
@@ -206,7 +205,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 {
   [super didLoad];
   {
-    ASDN::MutexLocker l(__instanceLock__);
+    ASDN::MutexLocker l(_propertyLock);
     [self createControls];
   }
 }
@@ -215,7 +214,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 {
   [super visibleStateDidChange:isVisible];
 
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
 
   if (isVisible && _loadAssetWhenNodeBecomesVisible) {
     if (_asset != _videoNode.asset) {
@@ -245,7 +244,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 #pragma mark - UI
 - (void)createControls
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
 
   if (_controlsDisabled) {
     return;
@@ -296,16 +295,17 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
   }
 
   ASPerformBlockOnMainThread(^{
-    ASDN::MutexLocker l(__instanceLock__);
+    ASDN::MutexLocker l(_propertyLock);
     [self setNeedsLayout];
   });
 }
 
 - (void)removeControls
 {
-  for (ASDisplayNode *node in [_cachedControls objectEnumerator]) {
+  NSArray *controls = [_cachedControls allValues];
+  [controls enumerateObjectsUsingBlock:^(ASDisplayNode   *_Nonnull node, NSUInteger idx, BOOL * _Nonnull stop) {
     [node removeFromSupernode];
-  }
+  }];
 
   [self cleanCachedControls];
 }
@@ -380,19 +380,19 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
       slider.maximumValue = 1.0;
 
       if (_delegateFlags.delegateScrubberMinimumTrackTintColor) {
-        slider.minimumTrackTintColor  = [strongSelf.delegate videoPlayerNodeScrubberMinimumTrackTint:strongSelf];
+        slider.minimumTrackTintColor  = [_delegate videoPlayerNodeScrubberMinimumTrackTint:strongSelf];
       }
 
       if (_delegateFlags.delegateScrubberMaximumTrackTintColor) {
-        slider.maximumTrackTintColor  = [strongSelf.delegate videoPlayerNodeScrubberMaximumTrackTint:strongSelf];
+        slider.maximumTrackTintColor  = [_delegate videoPlayerNodeScrubberMaximumTrackTint:strongSelf];
       }
 
       if (_delegateFlags.delegateScrubberThumbTintColor) {
-        slider.thumbTintColor  = [strongSelf.delegate videoPlayerNodeScrubberThumbTint:strongSelf];
+        slider.thumbTintColor  = [_delegate videoPlayerNodeScrubberThumbTint:strongSelf];
       }
 
       if (_delegateFlags.delegateScrubberThumbImage) {
-        UIImage *thumbImage = [strongSelf.delegate videoPlayerNodeScrubberThumbImage:strongSelf];
+        UIImage *thumbImage = [_delegate videoPlayerNodeScrubberThumbImage:strongSelf];
         [slider setThumbImage:thumbImage forState:UIControlStateNormal];
       }
 
@@ -576,7 +576,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 
 - (void)showSpinner
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
 
   if (!_spinnerNode) {
   
@@ -592,10 +592,6 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
         spinnnerView.color = _defaultControlsColor;
       }
       
-      if (_delegateFlags.delegateSpinnerStyle) {
-        spinnnerView.activityIndicatorViewStyle = [_delegate videoPlayerNodeSpinnerStyle:strongSelf];
-      }
-      
       return spinnnerView;
     }];
     _spinnerNode.preferredFrameSize = CGSizeMake(44.0, 44.0);
@@ -608,7 +604,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 
 - (void)removeSpinner
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
 
   if (!_spinnerNode) {
     return;
@@ -777,7 +773,6 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
     _delegateFlags.delegateNeededDefaultControls = [_delegate respondsToSelector:@selector(videoPlayerNodeNeededDefaultControls:)];
     _delegateFlags.delegateCustomControls = [_delegate respondsToSelector:@selector(videoPlayerNodeCustomControls:)];
     _delegateFlags.delegateSpinnerTintColor = [_delegate respondsToSelector:@selector(videoPlayerNodeSpinnerTint:)];
-    _delegateFlags.delegateSpinnerStyle = [_delegate respondsToSelector:@selector(videoPlayerNodeSpinnerStyle:)];
     _delegateFlags.delegateScrubberMaximumTrackTintColor = [_delegate respondsToSelector:@selector(videoPlayerNodeScrubberMaximumTrackTint:)];
     _delegateFlags.delegateScrubberMinimumTrackTintColor = [_delegate respondsToSelector:@selector(videoPlayerNodeScrubberMinimumTrackTint:)];
     _delegateFlags.delegateScrubberThumbTintColor = [_delegate respondsToSelector:@selector(videoPlayerNodeScrubberThumbTint:)];

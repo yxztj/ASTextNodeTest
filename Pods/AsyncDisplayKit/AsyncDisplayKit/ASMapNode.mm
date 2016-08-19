@@ -10,9 +10,6 @@
 
 #if TARGET_OS_IOS
 #import "ASMapNode.h"
-
-#import <tgmath.h>
-
 #import "ASDisplayNodeInternal.h"
 #import "ASDisplayNode+Subclasses.h"
 #import "ASDisplayNodeExtras.h"
@@ -25,6 +22,7 @@
   MKMapSnapshotter *_snapshotter;
   BOOL _snapshotAfterLayout;
   NSArray *_annotations;
+  CLLocationCoordinate2D _centerCoordinateOfMap;
 }
 @end
 
@@ -34,7 +32,6 @@
 @synthesize mapDelegate = _mapDelegate;
 @synthesize options = _options;
 @synthesize liveMap = _liveMap;
-@synthesize showAnnotationsOptions = _showAnnotationsOptions;
 
 #pragma mark - Lifecycle
 - (instancetype)init
@@ -44,12 +41,11 @@
   }
   self.backgroundColor = ASDisplayNodeDefaultPlaceholderColor();
   self.clipsToBounds = YES;
-  self.userInteractionEnabled = YES;
   
   _needsMapReloadOnBoundsChange = YES;
   _liveMap = NO;
+  _centerCoordinateOfMap = kCLLocationCoordinate2DInvalid;
   _annotations = @[];
-  _showAnnotationsOptions = ASMapNodeShowAnnotationsOptionsIgnored;
   return self;
 }
 
@@ -57,6 +53,7 @@
 {
   [super didLoad];
   if (self.isLiveMap) {
+    self.userInteractionEnabled = YES;
     [self addLiveMap];
   }
 }
@@ -98,14 +95,14 @@
 
 - (BOOL)isLiveMap
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _liveMap;
 }
 
 - (void)setLiveMap:(BOOL)liveMap
 {
   ASDisplayNodeAssert(!self.isLayerBacked, @"ASMapNode can not use the interactive map feature whilst .isLayerBacked = YES, set .layerBacked = NO to use the interactive map feature.");
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   if (liveMap == _liveMap) {
     return;
   }
@@ -117,19 +114,19 @@
 
 - (BOOL)needsMapReloadOnBoundsChange
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _needsMapReloadOnBoundsChange;
 }
 
 - (void)setNeedsMapReloadOnBoundsChange:(BOOL)needsMapReloadOnBoundsChange
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   _needsMapReloadOnBoundsChange = needsMapReloadOnBoundsChange;
 }
 
 - (MKMapSnapshotOptions *)options
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   if (!_options) {
     _options = [[MKMapSnapshotOptions alloc] init];
     _options.region = MKCoordinateRegionForMapRect(MKMapRectWorld);
@@ -143,7 +140,7 @@
 
 - (void)setOptions:(MKMapSnapshotOptions *)options
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   if (!_options || ![options isEqual:_options]) {
     _options = options;
     if (self.isLiveMap) {
@@ -162,9 +159,7 @@
 
 - (void)setRegion:(MKCoordinateRegion)region
 {
-  MKMapSnapshotOptions * options = [self.options copy];
-  options.region = region;
-  self.options = options;
+  self.options.region = region;
 }
 
 #pragma mark - Snapshotter
@@ -268,24 +263,24 @@
     [_mapView addAnnotations:_annotations];
     [weakSelf setNeedsLayout];
     [weakSelf.view addSubview:_mapView];
-
-    ASMapNodeShowAnnotationsOptions showAnnotationsOptions = self.showAnnotationsOptions;
-    if (showAnnotationsOptions & ASMapNodeShowAnnotationsOptionsZoomed) {
-      BOOL const animated = showAnnotationsOptions & ASMapNodeShowAnnotationsOptionsAnimated;
-      [_mapView showAnnotations:_mapView.annotations animated:animated];
+    
+    if (CLLocationCoordinate2DIsValid(_centerCoordinateOfMap)) {
+      [_mapView setCenterCoordinate:_centerCoordinateOfMap];
     }
   }
 }
 
 - (void)removeLiveMap
 {
+  // FIXME: With MKCoordinateRegion, isn't the center coordinate fully specified?  Do we need this?
+  _centerCoordinateOfMap = _mapView.centerCoordinate;
   [_mapView removeFromSuperview];
   _mapView = nil;
 }
 
 - (NSArray *)annotations
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   return _annotations;
 }
 
@@ -293,58 +288,14 @@
 {
   annotations = [annotations copy] ? : @[];
 
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   _annotations = annotations;
-  ASMapNodeShowAnnotationsOptions showAnnotationsOptions = self.showAnnotationsOptions;
   if (self.isLiveMap) {
     [_mapView removeAnnotations:_mapView.annotations];
     [_mapView addAnnotations:annotations];
-
-    if (showAnnotationsOptions & ASMapNodeShowAnnotationsOptionsZoomed) {
-      BOOL const animated = showAnnotationsOptions & ASMapNodeShowAnnotationsOptionsAnimated;
-      [_mapView showAnnotations:_mapView.annotations animated:animated];
-    }
   } else {
-    if (showAnnotationsOptions & ASMapNodeShowAnnotationsOptionsZoomed) {
-      self.region = [self regionToFitAnnotations:annotations];
-    }
-    else {
-      [self takeSnapshot];
-    }
+    [self takeSnapshot];
   }
-}
-
--(MKCoordinateRegion)regionToFitAnnotations:(NSArray<id<MKAnnotation>> *)annotations
-{
-  if([annotations count] == 0)
-    return MKCoordinateRegionForMapRect(MKMapRectWorld);
-
-  CLLocationCoordinate2D topLeftCoord = CLLocationCoordinate2DMake(-90, 180);
-  CLLocationCoordinate2D bottomRightCoord = CLLocationCoordinate2DMake(90, -180);
-
-  for (id<MKAnnotation> annotation in annotations) {
-    topLeftCoord = CLLocationCoordinate2DMake(std::fmax(topLeftCoord.latitude, annotation.coordinate.latitude),
-                                              std::fmin(topLeftCoord.longitude, annotation.coordinate.longitude));
-    bottomRightCoord = CLLocationCoordinate2DMake(std::fmin(bottomRightCoord.latitude, annotation.coordinate.latitude),
-                                                  std::fmax(bottomRightCoord.longitude, annotation.coordinate.longitude));
-  }
-
-  MKCoordinateRegion region = MKCoordinateRegionMake(CLLocationCoordinate2DMake(topLeftCoord.latitude - (topLeftCoord.latitude - bottomRightCoord.latitude) * 0.5,
-                                                                                topLeftCoord.longitude + (bottomRightCoord.longitude - topLeftCoord.longitude) * 0.5),
-                                                     MKCoordinateSpanMake(std::fabs(topLeftCoord.latitude - bottomRightCoord.latitude) * 2,
-                                                                          std::fabs(bottomRightCoord.longitude - topLeftCoord.longitude) * 2));
-
-  return region;
-}
-
--(ASMapNodeShowAnnotationsOptions)showAnnotationsOptions {
-  ASDN::MutexLocker l(__instanceLock__);
-  return _showAnnotationsOptions;
-}
-
--(void)setShowAnnotationsOptions:(ASMapNodeShowAnnotationsOptions)showAnnotationsOptions {
-  ASDN::MutexLocker l(__instanceLock__);
-  _showAnnotationsOptions = showAnnotationsOptions;
 }
 
 #pragma mark - Layout

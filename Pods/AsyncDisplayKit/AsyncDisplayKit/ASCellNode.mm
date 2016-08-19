@@ -104,6 +104,24 @@
   _viewControllerNode.frame = self.bounds;
 }
 
+- (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)viewBlock didLoadBlock:(ASDisplayNodeDidLoadBlock)didLoadBlock
+{
+  ASDisplayNodeAssertNotSupported();
+  return nil;
+}
+
+- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(ASDisplayNodeDidLoadBlock)didLoadBlock
+{
+  ASDisplayNodeAssertNotSupported();
+  return nil;
+}
+
+- (void)setLayerBacked:(BOOL)layerBacked
+{
+  // ASRangeController expects ASCellNodes to be view-backed.  (Layer-backing is supported on ASCellNode subnodes.)
+  ASDisplayNodeAssert(!layerBacked, @"ASCellNode does not support layer-backing.");
+}
+
 - (void)__setNeedsLayout
 {
   CGSize oldSize = self.calculatedSize;
@@ -111,39 +129,17 @@
   
   //Adding this lock because lock used to be held when this method was called. Not sure if it's necessary for
   //didRelayoutFromOldSize:toNewSize:
-  ASDN::MutexLocker l(__instanceLock__);
+  ASDN::MutexLocker l(_propertyLock);
   [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
 }
 
-- (void)transitionLayoutAnimated:(BOOL)animated
-           measurementCompletion:(void (^)())completion
-{
-  CGSize oldSize = self.calculatedSize;
-  [super transitionLayoutAnimated:animated
-            measurementCompletion:^{
-              [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
-              if (completion) {
-                completion();
-              }
-            }
-   ];
-}
-
-//Deprecated
 - (void)transitionLayoutWithAnimation:(BOOL)animated
-                   shouldMeasureAsync:(BOOL)shouldMeasureAsync
-                measurementCompletion:(void(^)())completion
-{
-  [self transitionLayoutAnimated:animated measurementCompletion:completion];
-}
-
-- (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
-                             animated:(BOOL)animated
-                measurementCompletion:(void (^)())completion
+                         shouldMeasureAsync:(BOOL)shouldMeasureAsync
+                      measurementCompletion:(void(^)())completion
 {
   CGSize oldSize = self.calculatedSize;
-  [super transitionLayoutWithSizeRange:constrainedSize
-                              animated:animated
+  [super transitionLayoutWithAnimation:animated
+                    shouldMeasureAsync:shouldMeasureAsync
                  measurementCompletion:^{
                    [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
                    if (completion) {
@@ -153,13 +149,22 @@
    ];
 }
 
-//Deprecated
 - (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
                              animated:(BOOL)animated
                    shouldMeasureAsync:(BOOL)shouldMeasureAsync
                 measurementCompletion:(void(^)())completion
 {
-  [self transitionLayoutWithSizeRange:constrainedSize animated:animated measurementCompletion:completion];
+  CGSize oldSize = self.calculatedSize;
+  [super transitionLayoutWithSizeRange:constrainedSize
+                              animated:animated
+                    shouldMeasureAsync:shouldMeasureAsync
+                 measurementCompletion:^{
+                   [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
+                   if (completion) {
+                     completion();
+                   }
+                 }
+   ];
 }
 
 - (void)didRelayoutFromOldSize:(CGSize)oldSize toNewSize:(CGSize)newSize
@@ -210,6 +215,16 @@
   }
 }
 
+- (BOOL)selected
+{
+  return self.isSelected;
+}
+
+- (BOOL)highlighted
+{
+  return self.isSelected;
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wobjc-missing-super-calls"
 
@@ -257,26 +272,13 @@
 {
   [super visibleStateDidChange:isVisible];
   
-  if (isVisible && self.neverShowPlaceholders) {
-    [self recursivelyEnsureDisplaySynchronously:YES];
-  }
-  
-  // NOTE: This assertion is failing in some apps and will be enabled soon.
-  // ASDisplayNodeAssert(self.isNodeLoaded, @"Node should be loaded in order for it to become visible or invisible.  If not in this situation, we shouldn't trigger creating the view.");
-  UIView *view = self.view;
   CGRect cellFrame = CGRectZero;
-  
-  // Ensure our _scrollView is still valid before converting.  It's also possible that we have already been removed from the _scrollView,
-  // in which case it is not valid to perform a convertRect (this actually crashes on iOS 7 and 8).
-  UIScrollView *scrollView = (_scrollView != nil && view.superview != nil && [view isDescendantOfView:_scrollView]) ? _scrollView : nil;
-  if (scrollView) {
-    cellFrame = [view convertRect:view.bounds toView:_scrollView];
+  if (_scrollView) {
+    // It is not safe to message nil with a structure return value, so ensure our _scrollView has not died.
+    cellFrame = [self.view convertRect:self.bounds toView:_scrollView];
   }
-  
-  // If we did not convert, we'll pass along CGRectZero and a nil scrollView.  The EventInvisible call is thus equivalent to
-  // visibleStateDidChange:NO, but is more convenient for the developer than implementing multiple methods.
   [self cellNodeVisibilityEvent:isVisible ? ASCellNodeVisibilityEventVisible : ASCellNodeVisibilityEventInvisible
-                   inScrollView:scrollView
+                   inScrollView:_scrollView
                   withCellFrame:cellFrame];
 }
 

@@ -27,9 +27,6 @@
   BOOL _automaticallyAdjustRangeModeBasedOnViewEvents;
   BOOL _parentManagesVisibilityDepth;
   NSInteger _visibilityDepth;
-  BOOL _selfConformsToRangeModeProtocol;
-  BOOL _nodeConformsToRangeModeProtocol;
-  BOOL _didCheckRangeModeProtocolConformance;
 }
 
 - (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
@@ -83,10 +80,6 @@
   if (AS_AT_LEAST_IOS8) {
     ASEnvironmentTraitCollection traitCollection = [self environmentTraitCollectionForUITraitCollection:self.traitCollection];
     [self progagateNewEnvironmentTraitCollection:traitCollection];
-  } else {
-    ASEnvironmentTraitCollection traitCollection = ASEnvironmentTraitCollectionMakeDefault();
-    traitCollection.containerSize = self.view.bounds.size;
-    [self progagateNewEnvironmentTraitCollection:traitCollection];
   }
 }
 
@@ -97,6 +90,16 @@
   
   if (!AS_AT_LEAST_IOS9) {
     [self _legacyHandleViewDidLayoutSubviews];
+  }
+}
+
+- (void)_legacyHandleViewDidLayoutSubviews
+{
+  // In modal presentation the view does not automatic resize in iOS7 and iOS8. As workaround we adjust the frame of the
+  // view manually
+  if (self.presentingViewController != nil) {
+    CGSize maxConstrainedSize = [self nodeConstrainedSize].max;
+    _node.frame = (CGRect){.origin = CGPointZero, .size = maxConstrainedSize};
   }
 }
 
@@ -174,25 +177,12 @@ ASVisibilityDepthImplementation;
 - (void)updateCurrentRangeModeWithModeIfPossible:(ASLayoutRangeMode)rangeMode
 {
   if (!_automaticallyAdjustRangeModeBasedOnViewEvents) { return; }
-  
-  if (!_didCheckRangeModeProtocolConformance) {
-    _selfConformsToRangeModeProtocol = [self conformsToProtocol:@protocol(ASRangeControllerUpdateRangeProtocol)];
-    _nodeConformsToRangeModeProtocol = [_node conformsToProtocol:@protocol(ASRangeControllerUpdateRangeProtocol)];
-    _didCheckRangeModeProtocolConformance = YES;
-    if (!_selfConformsToRangeModeProtocol && !_nodeConformsToRangeModeProtocol) {
-      NSLog(@"Warning: automaticallyAdjustRangeModeBasedOnViewEvents set to YES in %@, but range mode updating is not possible because neither view controller nor node %@ conform to ASRangeControllerUpdateRangeProtocol.", self, _node);
-    }
+  if (![_node conformsToProtocol:@protocol(ASRangeControllerUpdateRangeProtocol)]) {
+    return;
   }
-  
-  if (_selfConformsToRangeModeProtocol) {
-    id<ASRangeControllerUpdateRangeProtocol> rangeUpdater = (id<ASRangeControllerUpdateRangeProtocol>)self;
-    [rangeUpdater updateCurrentRangeWithMode:rangeMode];
-  }
-  
-  if (_nodeConformsToRangeModeProtocol) {
-    id<ASRangeControllerUpdateRangeProtocol> rangeUpdater = (id<ASRangeControllerUpdateRangeProtocol>)_node;
-    [rangeUpdater updateCurrentRangeWithMode:rangeMode];
-  }
+
+  id<ASRangeControllerUpdateRangeProtocol> updateRangeNode = (id<ASRangeControllerUpdateRangeProtocol>)_node;
+  [updateRangeNode updateCurrentRangeWithMode:rangeMode];
 }
 
 #pragma mark - Layout Helpers
@@ -207,38 +197,13 @@ ASVisibilityDepthImplementation;
   }
 }
 
-- (ASInterfaceState)interfaceState
-{
-  return _node.interfaceState;
-}
-
-#pragma mark - Legacy Layout Handling
-
-- (BOOL)_shouldLayoutTheLegacyWay
-{
-  BOOL isModalViewController = (self.presentingViewController != nil && self.presentedViewController == nil);
-  BOOL hasNavigationController = (self.navigationController != nil);
-  BOOL hasParentViewController = (self.parentViewController != nil);
-  if (isModalViewController && !hasNavigationController && !hasParentViewController) {
-    return YES;
-  }
-  
-  // Check if the view controller is a root view controller
-  BOOL isRootViewController = self.view.window.rootViewController == self;
-  if (isRootViewController) {
-    return YES;
-  }
-  
-  return NO;
-}
-
 - (ASSizeRange)_legacyConstrainedSize
 {
   // In modal presentation the view does not have the right bounds in iOS7 and iOS8. As workaround using the superviews
   // view bounds
   UIView *view = self.view;
   CGSize viewSize = view.bounds.size;
-  if ([self _shouldLayoutTheLegacyWay]) {
+  if (self.presentingViewController != nil) {
     UIView *superview = view.superview;
     if (superview != nil) {
       viewSize = superview.bounds.size;
@@ -247,14 +212,9 @@ ASVisibilityDepthImplementation;
   return ASSizeRangeMake(viewSize, viewSize);
 }
 
-- (void)_legacyHandleViewDidLayoutSubviews
+- (ASInterfaceState)interfaceState
 {
-  // In modal presentation or as root viw controller the view does not automatic resize in iOS7 and iOS8.
-  // As workaround we adjust the frame of the view manually
-  if ([self _shouldLayoutTheLegacyWay]) {
-    CGSize maxConstrainedSize = [self nodeConstrainedSize].max;
-    _node.frame = (CGRect){.origin = CGPointZero, .size = maxConstrainedSize};
-  }
+  return _node.interfaceState;
 }
 
 #pragma mark - ASEnvironmentTraitCollection
@@ -327,15 +287,6 @@ ASVisibilityDepthImplementation;
   
   ASEnvironmentTraitCollection environmentTraitCollection = [self environmentTraitCollectionForWindowSize:size];
   [self progagateNewEnvironmentTraitCollection:environmentTraitCollection];
-}
-
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
-{
-  [super didRotateFromInterfaceOrientation:fromInterfaceOrientation];
-  
-  ASEnvironmentTraitCollection traitCollection = self.node.environmentTraitCollection;
-  traitCollection.containerSize = self.view.bounds.size;
-  [self progagateNewEnvironmentTraitCollection:traitCollection];
 }
 
 @end

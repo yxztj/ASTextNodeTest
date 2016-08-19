@@ -13,7 +13,6 @@
 #import <objc/runtime.h>
 
 #import "ASThread.h"
-#import <tgmath.h>
 
 BOOL ASSubclassOverridesSelector(Class superclass, Class subclass, SEL selector)
 {
@@ -35,9 +34,6 @@ BOOL ASSubclassOverridesClassSelector(Class superclass, Class subclass, SEL sele
 
 void ASPerformBlockOnMainThread(void (^block)())
 {
-  if (block == nil){
-    return;
-  }
   if (ASDisplayNodeThreadIsMain()) {
     block();
   } else {
@@ -47,9 +43,6 @@ void ASPerformBlockOnMainThread(void (^block)())
 
 void ASPerformBlockOnBackgroundThread(void (^block)())
 {
-  if (block == nil){
-    return;
-  }
   if (ASDisplayNodeThreadIsMain()) {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), block);
   } else {
@@ -81,20 +74,17 @@ CGFloat ASScreenScale()
 
 CGFloat ASFloorPixelValue(CGFloat f)
 {
-  CGFloat scale = ASScreenScale();
-  return floor(f * scale) / scale;
+  return floorf(f * ASScreenScale()) / ASScreenScale();
 }
 
 CGFloat ASCeilPixelValue(CGFloat f)
 {
-  CGFloat scale = ASScreenScale();
-  return ceil(f * scale) / scale;
+  return ceilf(f * ASScreenScale()) / ASScreenScale();
 }
 
 CGFloat ASRoundPixelValue(CGFloat f)
 {
-  CGFloat scale = ASScreenScale();
-  return round(f * scale) / scale;
+  return roundf(f * ASScreenScale()) / ASScreenScale();
 }
 
 @implementation NSIndexPath (ASInverseComparison)

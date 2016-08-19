@@ -12,10 +12,7 @@
 
 #if TARGET_OS_TV
 #import "ASImageNode+tvOS.h"
-
 #import <GLKit/GLKit.h>
-#import <tgmath.h>
-
 #import "ASDisplayNodeExtras.h"
 
 @implementation ASImageNode (tvOS)
@@ -78,8 +75,8 @@
     // BUT we apply our transforms to *view since we want to apply
     // the transforms to the root view (L: 107)
     CGPoint point = [touch locationInView:self.view];
-    CGFloat pitch = 0;
-    CGFloat yaw = 0;
+    float pitch = 0;
+    float yaw = 0;
     BOOL topHalf = NO;
     if (point.y > CGRectGetHeight(self.view.frame)) {
       pitch = 15;
@@ -103,7 +100,7 @@
       if (yaw > 0) {
         yaw = -yaw;
       } else {
-        yaw = fabs(yaw);
+        yaw = fabsf(yaw);
       }
     }
     

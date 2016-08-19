@@ -35,15 +35,13 @@ extern ASRelativeSizeRange const ASRelativeSizeRangeUnconstrained;
 ASDISPLAYNODE_EXTERN_C_BEGIN
 NS_ASSUME_NONNULL_BEGIN
 
-#pragma mark - ASRelativeSize
+#pragma mark -
+#pragma mark ASRelativeSize
 
 extern ASRelativeSize ASRelativeSizeMake(ASRelativeDimension width, ASRelativeDimension height);
 
-/** Convenience constructor to provide size in points. */
+/** Convenience constructor to provide size in Points. */
 extern ASRelativeSize ASRelativeSizeMakeWithCGSize(CGSize size);
-
-/** Convenience constructor to provide size as a fraction. */
-extern ASRelativeSize ASRelativeSizeMakeWithFraction(CGFloat fraction);
 
 /** Resolve this relative size relative to a parent size. */
 extern CGSize ASRelativeSizeResolveSize(ASRelativeSize relativeSize, CGSize parentSize);
@@ -52,7 +50,8 @@ extern BOOL ASRelativeSizeEqualToRelativeSize(ASRelativeSize lhs, ASRelativeSize
 
 extern NSString *NSStringFromASRelativeSize(ASRelativeSize size);
 
-#pragma mark - ASRelativeSizeRange
+#pragma mark -
+#pragma mark ASRelativeSizeRange
 
 extern ASRelativeSizeRange ASRelativeSizeRangeMake(ASRelativeSize min, ASRelativeSize max);
 
@@ -61,15 +60,16 @@ extern ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactRelativeSize(ASRelati
 
 extern ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactCGSize(CGSize exact);
 
-extern ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactFraction(CGFloat fraction);
-
 extern ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactRelativeDimensions(ASRelativeDimension exactWidth,
                                                                               ASRelativeDimension exactHeight);
 
 extern BOOL ASRelativeSizeRangeEqualToRelativeSizeRange(ASRelativeSizeRange lhs, ASRelativeSizeRange rhs);
 
-/** Provided a parent size, compute final dimensions for this RelativeSizeRange to arrive at a SizeRange. */
-extern ASSizeRange ASRelativeSizeRangeResolve(ASRelativeSizeRange relativeSizeRange, CGSize parentSize);
+/**
+ Provided a parent size, compute final dimensions for this RelativeSizeRange to arrive at a SizeRange.
+ */
+extern ASSizeRange ASRelativeSizeRangeResolve(ASRelativeSizeRange relativeSizeRange,
+                                                       CGSize parentSize);
 
 NS_ASSUME_NONNULL_END
 ASDISPLAYNODE_EXTERN_C_END

@@ -19,7 +19,7 @@
 
 @implementation ASStackLayoutSpec
 {
-  ASDN::RecursiveMutex __instanceLock__;
+  ASDN::RecursiveMutex _propertyLock;
 }
 
 - (instancetype)init
@@ -144,11 +144,11 @@
   // and min descender in case this spec is a child in another spec that wants to align to a baseline.
   const auto baselinePositionedLayout = ASStackBaselinePositionedLayout::compute(positionedLayout, style, constrainedSize);
   if (self.direction == ASStackLayoutDirectionVertical) {
-    ASDN::MutexLocker l(__instanceLock__);
+    ASDN::MutexLocker l(_propertyLock);
     self.ascender = [[self.children firstObject] ascender];
     self.descender = [[self.children lastObject] descender];
   } else {
-    ASDN::MutexLocker l(__instanceLock__);
+    ASDN::MutexLocker l(_propertyLock);
     self.ascender = baselinePositionedLayout.ascender;
     self.descender = baselinePositionedLayout.descender;
   }

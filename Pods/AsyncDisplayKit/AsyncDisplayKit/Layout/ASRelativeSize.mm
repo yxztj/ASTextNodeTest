@@ -12,7 +12,8 @@
 
 ASRelativeSizeRange const ASRelativeSizeRangeUnconstrained = {};
 
-#pragma mark - ASRelativeSize
+#pragma mark -
+#pragma mark ASRelativeSize
 
 ASRelativeSize ASRelativeSizeMake(ASRelativeDimension width, ASRelativeDimension height)
 {
@@ -23,12 +24,6 @@ ASRelativeSize ASRelativeSizeMakeWithCGSize(CGSize size)
 {
   return ASRelativeSizeMake(ASRelativeDimensionMakeWithPoints(size.width),
                             ASRelativeDimensionMakeWithPoints(size.height));
-}
-
-ASRelativeSize ASRelativeSizeMakeWithFraction(CGFloat fraction)
-{
-  return ASRelativeSizeMake(ASRelativeDimensionMakeWithFraction(fraction),
-                            ASRelativeDimensionMakeWithFraction(fraction));
 }
 
 CGSize ASRelativeSizeResolveSize(ASRelativeSize relativeSize, CGSize parentSize)
@@ -50,7 +45,8 @@ NSString *NSStringFromASRelativeSize(ASRelativeSize size)
           NSStringFromASRelativeDimension(size.height)];
 }
 
-#pragma mark - ASRelativeSizeRange
+#pragma mark -
+#pragma mark ASRelativeSizeRange
 
 ASRelativeSizeRange ASRelativeSizeRangeMake(ASRelativeSize min, ASRelativeSize max)
 {
@@ -65,11 +61,6 @@ ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactRelativeSize(ASRelativeSize 
 ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactCGSize(CGSize exact)
 {
   return ASRelativeSizeRangeMakeWithExactRelativeSize(ASRelativeSizeMakeWithCGSize(exact));
-}
-
-ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactFraction(CGFloat fraction)
-{
-  return ASRelativeSizeRangeMakeWithExactRelativeSize(ASRelativeSizeMakeWithFraction(fraction));
 }
 
 ASRelativeSizeRange ASRelativeSizeRangeMakeWithExactRelativeDimensions(ASRelativeDimension exactWidth,

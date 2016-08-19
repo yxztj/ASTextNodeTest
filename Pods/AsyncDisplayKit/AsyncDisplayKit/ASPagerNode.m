@@ -15,23 +15,18 @@
 #import "ASDisplayNode+Subclasses.h"
 #import "ASPagerFlowLayout.h"
 
-@interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionViewDelegateFlowLayout, ASDelegateProxyInterceptor>
+@interface ASPagerNode () <ASCollectionDataSource, ASCollectionViewDelegateFlowLayout, ASDelegateProxyInterceptor>
 {
   ASPagerFlowLayout *_flowLayout;
-
-  __weak id <ASPagerDataSource> _pagerDataSource;
-  ASPagerNodeProxy *_proxyDataSource;
+  ASPagerNodeProxy *_proxy;
+  __weak id <ASPagerNodeDataSource> _pagerDataSource;
   BOOL _pagerDataSourceImplementsNodeBlockAtIndex;
-
-  __weak id <ASPagerDelegate> _pagerDelegate;
-  ASPagerNodeProxy *_proxyDelegate;
-  BOOL _pagerDelegateImplementsConstrainedSizeForNode;
+  BOOL _pagerDataSourceImplementsConstrainedSizeForNode;
 }
 
 @end
 
 @implementation ASPagerNode
-
 @dynamic view, delegate, dataSource;
 
 #pragma mark - Lifecycle
@@ -63,8 +58,6 @@
   [super didLoad];
   
   ASCollectionView *cv = self.view;
-  cv.asyncDataSource = (id<ASCollectionViewDataSource>)_proxyDataSource ?: self;
-  cv.asyncDelegate = (id<ASCollectionViewDelegate>)_proxyDelegate ?: self;
 #if TARGET_OS_IOS
   cv.pagingEnabled = YES;
   cv.scrollsToTop = NO;
@@ -129,10 +122,9 @@
 
 - (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath
 {
-  if (_pagerDelegateImplementsConstrainedSizeForNode) {
-    return [_pagerDelegate pagerNode:self constrainedSizeForNodeAtIndexPath:indexPath];
+  if (_pagerDataSourceImplementsConstrainedSizeForNode) {
+    return [_pagerDataSource pagerNode:self constrainedSizeForNodeAtIndexPath:indexPath];
   }
-
   return ASSizeRangeMake(CGSizeZero, self.view.bounds.size);
 }
 
@@ -143,38 +135,26 @@
   return _pagerDataSource;
 }
 
-- (void)setDataSource:(id <ASPagerDataSource>)dataSource
+- (void)setDataSource:(id <ASPagerDataSource>)pagerDataSource
 {
-  if (dataSource != _pagerDataSource) {
-    _pagerDataSource = dataSource;
+  if (pagerDataSource != _pagerDataSource) {
+    _pagerDataSource = pagerDataSource;
     
     _pagerDataSourceImplementsNodeBlockAtIndex = [_pagerDataSource respondsToSelector:@selector(pagerNode:nodeBlockAtIndex:)];
     // Data source must implement pagerNode:nodeBlockAtIndex: or pagerNode:nodeAtIndex:
     ASDisplayNodeAssertTrue(_pagerDataSourceImplementsNodeBlockAtIndex || [_pagerDataSource respondsToSelector:@selector(pagerNode:nodeAtIndex:)]);
     
-    _proxyDataSource = dataSource ? [[ASPagerNodeProxy alloc] initWithTarget:dataSource interceptor:self] : nil;
+    _pagerDataSourceImplementsConstrainedSizeForNode = [_pagerDataSource respondsToSelector:@selector(pagerNode:constrainedSizeForNodeAtIndexPath:)];
     
-    super.dataSource = (id <ASCollectionDataSource>)_proxyDataSource;
-  }
-}
-
-- (void)setDelegate:(id<ASPagerDelegate>)delegate
-{
-  if (delegate != _pagerDelegate) {
-    _pagerDelegate = delegate;
+    _proxy = pagerDataSource ? [[ASPagerNodeProxy alloc] initWithTarget:pagerDataSource interceptor:self] : nil;
     
-    _pagerDelegateImplementsConstrainedSizeForNode = [_pagerDelegate respondsToSelector:@selector(pagerNode:constrainedSizeForNodeAtIndexPath:)];
-    
-    _proxyDelegate = delegate ? [[ASPagerNodeProxy alloc] initWithTarget:delegate interceptor:self] : nil;
-    
-    super.delegate = (id <ASCollectionDelegate>)_proxyDelegate;
+    super.dataSource = (id <ASCollectionDataSource>)_proxy;
   }
 }
 
 - (void)proxyTargetHasDeallocated:(ASDelegateProxy *)proxy
 {
   [self setDataSource:nil];
-  [self setDelegate:nil];
 }
 
 @end

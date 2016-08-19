@@ -13,29 +13,22 @@
 
 ASRelativeDimension const ASRelativeDimensionUnconstrained = {};
 
-#pragma mark - ASRelativeDimension
+#pragma mark ASRelativeDimension
 
 ASRelativeDimension ASRelativeDimensionMake(ASRelativeDimensionType type, CGFloat value)
 {
-  if (type == ASRelativeDimensionTypePoints) {
-    ASDisplayNodeCAssertPositiveReal(@"Points", value);
-  } else if (type == ASRelativeDimensionTypeFraction) {
-    // TODO: Enable this assertion for 2.0.  Check that there is no use case for using a larger value, e.g. to layout for a clipsToBounds = NO element.
-    // ASDisplayNodeCAssert( 0 <= value && value <= 1.0, @"ASRelativeDimension fraction value (%f) must be between 0 and 1.", value);
-  }
+  if (type == ASRelativeDimensionTypePoints) { ASDisplayNodeCAssertPositiveReal(@"Points", value); }
   ASRelativeDimension dimension; dimension.type = type; dimension.value = value; return dimension;
 }
 
 ASRelativeDimension ASRelativeDimensionMakeWithPoints(CGFloat points)
 {
-  ASDisplayNodeCAssertPositiveReal(@"Points", points);
   return ASRelativeDimensionMake(ASRelativeDimensionTypePoints, points);
 }
 
-ASRelativeDimension ASRelativeDimensionMakeWithFraction(CGFloat fraction)
+ASRelativeDimension ASRelativeDimensionMakeWithPercent(CGFloat percent)
 {
-  // ASDisplayNodeCAssert( 0 <= fraction && fraction <= 1.0, @"ASRelativeDimension fraction value (%f) must be between 0 and 1.", fraction);
-  return ASRelativeDimensionMake(ASRelativeDimensionTypeFraction, fraction);
+  return ASRelativeDimensionMake(ASRelativeDimensionTypePercent, percent);
 }
 
 ASRelativeDimension ASRelativeDimensionCopy(ASRelativeDimension aDimension)
@@ -53,7 +46,7 @@ NSString *NSStringFromASRelativeDimension(ASRelativeDimension dimension)
   switch (dimension.type) {
     case ASRelativeDimensionTypePoints:
       return [NSString stringWithFormat:@"%.0fpt", dimension.value];
-    case ASRelativeDimensionTypeFraction:
+    case ASRelativeDimensionTypePercent:
       return [NSString stringWithFormat:@"%.0f%%", dimension.value * 100.0];
   }
 }
@@ -63,12 +56,13 @@ CGFloat ASRelativeDimensionResolve(ASRelativeDimension dimension, CGFloat parent
   switch (dimension.type) {
     case ASRelativeDimensionTypePoints:
       return dimension.value;
-    case ASRelativeDimensionTypeFraction:
+    case ASRelativeDimensionTypePercent:
       return dimension.value * parent;
   }
 }
 
-#pragma mark - ASSizeRange
+#pragma mark -
+#pragma mark ASSizeRange
 
 ASSizeRange ASSizeRangeMake(CGSize min, CGSize max)
 {

@@ -37,9 +37,9 @@
 #define __loaded(node) (node->_view != nil || (node->_layer != nil && node->_flags.layerBacked))
 
 #if DISPLAYNODE_USE_LOCKS
-#define _bridge_prologue_read ASDN::MutexLocker l(__instanceLock__); ASDisplayNodeAssertThreadAffinity(self)
-#define _bridge_prologue_write ASDN::MutexLocker l(__instanceLock__)
-#define _bridge_prologue_write_unlock ASDN::MutexUnlocker u(__instanceLock__)
+#define _bridge_prologue_read ASDN::MutexLocker l(_propertyLock); ASDisplayNodeAssertThreadAffinity(self)
+#define _bridge_prologue_write ASDN::MutexLocker l(_propertyLock)
+#define _bridge_prologue_write_unlock ASDN::MutexUnlocker u(_propertyLock)
 #else
 #define _bridge_prologue_read ASDisplayNodeAssertThreadAffinity(self)
 #define _bridge_prologue_write
@@ -344,7 +344,7 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
     // The node is loaded but we're not on main.
     // We will call [self __setNeedsLayout] when we apply
     // the pending state. We need to call it on main if the node is loaded
-    // to support automatic subnode management.
+    // to support implicit hierarchy management.
     [ASDisplayNodeGetPendingState(self) setNeedsLayout];
   } else {
     // The node is not loaded and we're not on main.

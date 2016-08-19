@@ -31,7 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface ASVideoPlayerNode : ASDisplayNode
 
-@property (nullable, nonatomic, weak) id<ASVideoPlayerNodeDelegate> delegate;
+@property (nullable, atomic, weak) id<ASVideoPlayerNodeDelegate> delegate;
 
 @property (nonatomic, assign, readonly) CMTime duration;
 
@@ -49,12 +49,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readwrite) BOOL muted;
 @property (nonatomic, assign, readonly) ASVideoNodePlayerState playerState;
 @property (nonatomic, assign, readwrite) BOOL shouldAggressivelyRecoverFromStall;
-@property (nullable, nonatomic, strong, readwrite) NSURL *placeholderImageURL;
+@property (nullable, atomic, strong, readwrite) NSURL *placeholderImageURL;
 
 //! Defaults to 100
 @property (nonatomic, assign) int32_t periodicTimeObserverTimescale;
 //! Defaults to AVLayerVideoGravityResizeAspect
-@property (nonatomic) NSString *gravity;
+@property (atomic) NSString *gravity;
 
 - (instancetype)initWithUrl:(NSURL*)url;
 - (instancetype)initWithAsset:(AVAsset*)asset;
@@ -119,7 +119,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Spinner delegate methods
 - (UIColor *)videoPlayerNodeSpinnerTint:(ASVideoPlayerNode *)videoPlayer;
-- (UIActivityIndicatorViewStyle)videoPlayerNodeSpinnerStyle:(ASVideoPlayerNode *)videoPlayer;
 
 #pragma mark - Playback button delegate methods
 - (UIColor *)videoPlayerNodePlaybackButtonTint:(ASVideoPlayerNode *)videoPlayer;

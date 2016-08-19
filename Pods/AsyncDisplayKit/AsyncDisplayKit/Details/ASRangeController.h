@@ -40,18 +40,12 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Notify the range controller that the visible range has been updated.
  * This is the primary input call that drives updating the working ranges, and triggering their actions.
- * The ranges will be updated in the next turn of the main loop, or when -updateIfNeeded is called.
+ *
+ * @param scrollDirection The current scroll direction of the scroll view.
  *
  * @see [ASRangeControllerDelegate rangeControllerVisibleNodeIndexPaths:]
  */
-- (void)setNeedsUpdate;
-
-/**
- * Update the ranges immediately, if -setNeedsUpdate has been called since the last update.
- * This is useful because the ranges must be updated immediately after a cell is added
- * into a table/collection to satisfy interface state API guarantees.
- */
-- (void)updateIfNeeded;
+- (void)visibleNodeIndexPathsDidChangeWithScrollDirection:(ASScrollDirection)scrollDirection;
 
 /**
  * Add the sized node for `indexPath` as a subview of `contentView`.
@@ -110,13 +104,6 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @param rangeController Sender.
  *
- * @returns the current scroll direction of the view using this range controller.
- */
-- (ASScrollDirection)scrollDirectionForRangeController:(ASRangeController *)rangeController;
-
-/**
- * @param rangeController Sender.
- *
  * @returns the receiver's viewport size (i.e., the screen space occupied by the visible range).
  */
 - (CGSize)viewportSizeForRangeController:(ASRangeController *)rangeController;
@@ -130,11 +117,11 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (ASInterfaceState)interfaceStateForRangeController:(ASRangeController *)rangeController;
 
+- (NSArray *)rangeController:(ASRangeController *)rangeController nodesAtIndexPaths:(NSArray *)indexPaths;
+
 - (ASDisplayNode *)rangeController:(ASRangeController *)rangeController nodeAtIndexPath:(NSIndexPath *)indexPath;
 
 - (NSArray<NSArray <ASCellNode *> *> *)completedNodes;
-
-- (NSString *)nameForRangeControllerDataSource;
 
 @end
 

@@ -43,13 +43,13 @@ enum class ASEnvironmentStatePropagation { DOWN, UP };
 
 static const struct ASEnvironmentStateExtensions ASEnvironmentDefaultStateExtensions = {};
 
-static const struct ASEnvironmentLayoutOptionsState ASEnvironmentDefaultLayoutOptionsState = ASEnvironmentLayoutOptionsStateMakeDefault();
+static const struct ASEnvironmentLayoutOptionsState ASEnvironmentDefaultLayoutOptionsState = {};
 ASEnvironmentState ASEnvironmentMergeObjectAndState(ASEnvironmentState environmentState, ASEnvironmentLayoutOptionsState state, ASEnvironmentStatePropagation propagation);
 
-static const struct ASEnvironmentHierarchyState ASEnvironmentDefaultHierarchyState = ASEnvironmentHierarchyStateMakeDefault();
+static const struct ASEnvironmentHierarchyState ASEnvironmentDefaultHierarchyState = {};
 ASEnvironmentState ASEnvironmentMergeObjectAndState(ASEnvironmentState environmentState, ASEnvironmentHierarchyState state, ASEnvironmentStatePropagation propagation);
 
-static const struct ASEnvironmentTraitCollection ASEnvironmentDefaultTraitCollection = ASEnvironmentTraitCollectionMakeDefault();
+static const struct ASEnvironmentTraitCollection ASEnvironmentDefaultTraitCollection = {};
 ASEnvironmentState ASEnvironmentMergeObjectAndState(ASEnvironmentState environmentState, ASEnvironmentTraitCollection state, ASEnvironmentStatePropagation propagation);
 
 
