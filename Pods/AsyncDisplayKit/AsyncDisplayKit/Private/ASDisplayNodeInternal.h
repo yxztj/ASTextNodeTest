@@ -1,10 +1,12 @@
-/* Copyright (c) 2014-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
+//
+//  ASDisplayNodeInternal.h
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 //
 // The following methods are ONLY for use by _ASDisplayLayer, _ASDisplayView, and ASDisplayNode.
@@ -12,17 +14,24 @@
 //
 
 #import "_AS-objc-internal.h"
-#import "ASDisplayNodeExtraIvars.h"
 #import "ASDisplayNode.h"
 #import "ASSentinel.h"
 #import "ASThread.h"
-#import "ASLayoutOptions.h"
+#import "_ASTransitionContext.h"
+#import "ASLayoutTransition.h"
+#import "ASEnvironment.h"
 
 @protocol _ASDisplayLayerDelegate;
 @class _ASDisplayLayer;
+@class _ASPendingState;
+@class ASSentinel;
+struct ASDisplayNodeFlags;
 
 BOOL ASDisplayNodeSubclassOverridesSelector(Class subclass, SEL selector);
-void ASDisplayNodeRespectThreadAffinityOfNode(ASDisplayNode *node, void (^block)());
+BOOL ASDisplayNodeNeedsSpecialPropertiesHandlingForFlags(ASDisplayNodeFlags flags);
+
+/// Get the pending view state for the node, creating one if needed.
+_ASPendingState *ASDisplayNodeGetPendingState(ASDisplayNode *node);
 
 typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
 {
@@ -34,48 +43,26 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
   ASDisplayNodeMethodOverrideLayoutSpecThatFits = 1 << 4
 };
 
-@class _ASPendingState;
+@class _ASDisplayNodePosition;
+
+FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayScheduledNodesNotification;
+FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimestamp;
 
 // Allow 2^n increments of begin disabling hierarchy notifications
 #define VISIBILITY_NOTIFICATIONS_DISABLED_BITS 4
 
-#define TIME_DISPLAYNODE_OPS (DEBUG || PROFILE)
+#define TIME_DISPLAYNODE_OPS 0 // If you're using this information frequently, try: (DEBUG || PROFILE)
 
 @interface ASDisplayNode ()
 {
-@protected
+@package
+  _ASPendingState *_pendingViewState;
+
   // Protects access to _view, _layer, _pendingViewState, _subnodes, _supernode, and other properties which are accessed from multiple threads.
-  ASDN::RecursiveMutex _propertyLock;
-
-  ASDisplayNode * __weak _supernode;
-
-  ASSentinel *_displaySentinel;
-  ASSentinel *_replaceAsyncSentinel;
-
-  // This is the desired contentsScale, not the scale at which the layer's contents should be displayed
-  CGFloat _contentsScaleForDisplay;
-
-  ASLayout *_layout;
-  ASSizeRange _constrainedSize;
-  UIEdgeInsets _hitTestSlop;
-  NSMutableArray *_subnodes;
-
-  ASDisplayNodeViewBlock _viewBlock;
-  ASDisplayNodeLayerBlock _layerBlock;
-  ASDisplayNodeDidLoadBlock _nodeLoadedBlock;
-  Class _viewClass;
-  Class _layerClass;
+  ASDN::RecursiveMutex __instanceLock__;
   UIView *_view;
   CALayer *_layer;
 
-  UIImage *_placeholderImage;
-  CALayer *_placeholderLayer;
-
-  // keeps track of nodes/subnodes that have not finished display, used with placeholders
-  NSMutableSet *_pendingDisplayNodes;
-
-  _ASPendingState *_pendingViewState;
-  
   struct ASDisplayNodeFlags {
     // public properties
     unsigned synchronous:1;
@@ -84,21 +71,96 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
     unsigned shouldRasterizeDescendants:1;
     unsigned shouldBypassEnsureDisplay:1;
     unsigned displaySuspended:1;
+    unsigned shouldAnimateSizeChanges:1;
+    unsigned hasCustomDrawingPriority:1;
+    
+    // Wrapped view handling
+    
+    // The layer contents should not be cleared in case the node is wrapping a UIImageView.UIImageView is specifically
+    // optimized for performance and does not use the usual way to provide the contents of the CALayer via the
+    // CALayerDelegate method that backs the UIImageView.
+    unsigned canClearContentsOfLayer:1;
+    
+    // Prevent calling setNeedsDisplay on a layer that backs a UIImageView. Usually calling setNeedsDisplay on a CALayer
+    // triggers a recreation of the contents of layer unfortunately calling it on a CALayer that backs a UIImageView
+    // it goes through the normal flow to assign the contents to a layer via the CALayerDelegate methods. Unfortunately
+    // UIImageView does not do recreate the layer contents the usual way, it actually does not implement some of the
+    // methods at all instead it throws away the contents of the layer and nothing will show up.
+    unsigned canCallSetNeedsDisplayOfLayer:1;
 
     // whether custom drawing is enabled
+    unsigned implementsInstanceDrawRect:1;
     unsigned implementsDrawRect:1;
+    unsigned implementsInstanceImageDisplay:1;
     unsigned implementsImageDisplay:1;
     unsigned implementsDrawParameters:1;
 
     // internal state
-    unsigned isMeasured:1;
     unsigned isEnteringHierarchy:1;
     unsigned isExitingHierarchy:1;
     unsigned isInHierarchy:1;
     unsigned visibilityNotificationsDisabled:VISIBILITY_NOTIFICATIONS_DISABLED_BITS;
   } _flags;
+  
+@protected
+  ASDisplayNode * __weak _supernode;
 
-  ASDisplayNodeExtraIvars _extra;
+  ASSentinel *_displaySentinel;
+
+  int32_t _transitionID;
+  BOOL _transitionInProgress;
+
+  // This is the desired contentsScale, not the scale at which the layer's contents should be displayed
+  CGFloat _contentsScaleForDisplay;
+
+  ASEnvironmentState _environmentState;
+  ASLayout *_calculatedLayout;
+
+
+  UIEdgeInsets _hitTestSlop;
+  NSMutableArray *_subnodes;
+  
+  // Main thread only
+  _ASTransitionContext *_pendingLayoutTransitionContext;
+  BOOL _automaticallyManagesSubnodes;
+  NSTimeInterval _defaultLayoutTransitionDuration;
+  NSTimeInterval _defaultLayoutTransitionDelay;
+  UIViewAnimationOptions _defaultLayoutTransitionOptions;
+
+  int32_t _pendingTransitionID;
+  ASLayoutTransition *_pendingLayoutTransition;
+  
+  ASDisplayNodeViewBlock _viewBlock;
+  ASDisplayNodeLayerBlock _layerBlock;
+  ASDisplayNodeDidLoadBlock _nodeLoadedBlock;
+  Class _viewClass;
+  Class _layerClass;
+  
+  UIImage *_placeholderImage;
+  CALayer *_placeholderLayer;
+
+  // keeps track of nodes/subnodes that have not finished display, used with placeholders
+  NSMutableSet *_pendingDisplayNodes;
+
+  ASDisplayNodeContextModifier _willDisplayNodeContentWithRenderingContext;
+  ASDisplayNodeContextModifier _didDisplayNodeContentWithRenderingContext;
+
+  // Accessibility support
+  BOOL _isAccessibilityElement;
+  NSString *_accessibilityLabel;
+  NSString *_accessibilityHint;
+  NSString *_accessibilityValue;
+  UIAccessibilityTraits _accessibilityTraits;
+  CGRect _accessibilityFrame;
+  NSString *_accessibilityLanguage;
+  BOOL _accessibilityElementsHidden;
+  BOOL _accessibilityViewIsModal;
+  BOOL _shouldGroupAccessibilityChildren;
+  NSString *_accessibilityIdentifier;
+  UIAccessibilityNavigationStyle _accessibilityNavigationStyle;
+  NSArray *_accessibilityHeaderElements;
+  CGPoint _accessibilityActivationPoint;
+  UIBezierPath *_accessibilityPath;
 
 #if TIME_DISPLAYNODE_OPS
 @public
@@ -109,42 +171,39 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
 #endif
 }
 
-+ (void)scheduleNodeForDisplay:(ASDisplayNode *)node;
++ (void)scheduleNodeForRecursiveDisplay:(ASDisplayNode *)node;
 
 // The _ASDisplayLayer backing the node, if any.
-@property (nonatomic, readonly, retain) _ASDisplayLayer *asyncLayer;
-
-// Creates a pendingViewState if one doesn't exist. Allows setting view properties on a bg thread before there is a view.
-@property (atomic, retain, readonly) _ASPendingState *pendingViewState;
+@property (nonatomic, readonly, strong) _ASDisplayLayer *asyncLayer;
 
 // Bitmask to check which methods an object overrides.
 @property (nonatomic, assign, readonly) ASDisplayNodeMethodOverrides methodOverrides;
+
+@property (nonatomic, assign) CGRect threadSafeBounds;
 
 
 // Swizzle to extend the builtin functionality with custom logic
 - (BOOL)__shouldLoadViewOrLayer;
 - (BOOL)__shouldSize;
 
-// Core implementation of -measureWithSizeRange:. Must be called with _propertyLock held.
-- (ASLayout *)__measureWithSizeRange:(ASSizeRange)constrainedSize;
-
+/**
+ Invoked before a call to setNeedsLayout to the underlying view
+ */
 - (void)__setNeedsLayout;
+
+/**
+ Invoked after a call to setNeedsDisplay to the underlying view
+ */
+- (void)__setNeedsDisplay;
+
 - (void)__layout;
 - (void)__setSupernode:(ASDisplayNode *)supernode;
-
-// Changed before calling willEnterHierarchy / didExitHierarchy.
-@property (nonatomic, readwrite, assign, getter = isInHierarchy) BOOL inHierarchy;
 
 // Private API for helper functions / unit tests.  Use ASDisplayNodeDisableHierarchyNotifications() to control this.
 - (BOOL)__visibilityNotificationsDisabled;
 - (BOOL)__selfOrParentHasVisibilityNotificationsDisabled;
 - (void)__incrementVisibilityNotificationsDisabled;
 - (void)__decrementVisibilityNotificationsDisabled;
-
-// Call willEnterHierarchy if necessary and set inHierarchy = YES if visibility notifications are enabled on all of its parents
-- (void)__enterHierarchy;
-// Call didExitHierarchy if necessary and set inHierarchy = NO if visibility notifications are enabled on all of its parents
-- (void)__exitHierarchy;
 
 // Helper method to summarize whether or not the node run through the display process
 - (BOOL)__implementsDisplay;
@@ -153,12 +212,14 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
 - (void)displayImmediately;
 
 // Alternative initialiser for backing with a custom view class.  Supports asynchronous display with _ASDisplayView subclasses.
-- (id)initWithViewClass:(Class)viewClass;
+- (instancetype)initWithViewClass:(Class)viewClass;
 
 // Alternative initialiser for backing with a custom layer class.  Supports asynchronous display with _ASDisplayLayer subclasses.
-- (id)initWithLayerClass:(Class)layerClass;
+- (instancetype)initWithLayerClass:(Class)layerClass;
 
 @property (nonatomic, assign) CGFloat contentsScaleForDisplay;
+
+- (void)applyPendingViewState;
 
 /**
  * // TODO: NOT YET IMPLEMENTED
@@ -181,5 +242,11 @@ typedef NS_OPTIONS(NSUInteger, ASDisplayNodeMethodOverrides)
  * If YES, this method must be called on the main thread and the node must not be layer-backed.
  */
 - (ASDisplayNode *)_supernodeWithClass:(Class)supernodeClass checkViewHierarchy:(BOOL)checkViewHierarchy;
+
+/**
+ *  Convenience method to access this node's trait collection struct. Externally, users should interact
+ *  with the trait collection via ASTraitCollection
+ */
+- (ASEnvironmentTraitCollection)environmentTraitCollection;
 
 @end

@@ -9,6 +9,16 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>PINCache.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>PINRemoteImage.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>Pods-ASTextNodeTest.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -17,12 +27,22 @@
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
-		<key>1916DC8ADFCE8538B9235F46F241A02D</key>
+		<key>31C68ED456F4684524B5731EEDE37C4A</key>
 		<dict>
 			<key>primary</key>
 			<true/>
 		</dict>
-		<key>8407E97C0C3F3BD90A5BCBB74A37105D</key>
+		<key>4C38A64D25B877EB8911A79C91337313</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>62875EE37D0DDB76A07B8759573D6B73</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>DDCAC8A31D2DB91CAB5149A1853F6A8E</key>
 		<dict>
 			<key>primary</key>
 			<true/>

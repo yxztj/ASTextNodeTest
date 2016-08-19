@@ -25,7 +25,7 @@ class ViewController: UIViewController {
 
 extension ViewController: ASTableDataSource {
     func tableView(tableView: ASTableView, nodeForRowAtIndexPath indexPath: NSIndexPath) -> ASCellNode {
-        return TestContainerNode()
+        return TestNode()
     }
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -33,33 +33,23 @@ extension ViewController: ASTableDataSource {
     }
 }
 
-class TestContainerNode: ASCellNode {
-    var subnode = TestSubnode()
-    override init() {
-        super.init()
-        self.addSubnode(subnode)
-    }
-    
-    override func layoutSpecThatFits(constrainedSize: ASSizeRange) -> ASLayoutSpec {
-        let insetSpec = ASInsetLayoutSpec(insets: UIEdgeInsets(top: 30, left: 100, bottom: 30, right: 100), child: subnode)
-        return insetSpec
-    }
-}
-
-class TestSubnode: ASDisplayNode {
+class TestNode: ASCellNode {
     let topicTextNode: ASTextNode
-    
+
     override init() {
         topicTextNode = ASTextNode()
+
+        let messageFont = UIFont.systemFontOfSize(16, weight: UIFontWeightLight)
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = .Center
-        let topicAttr: [String: AnyObject] = [NSParagraphStyleAttributeName: paragraphStyle]
-        topicTextNode.attributedString = NSAttributedString(string: "TEST TEST TEST", attributes: topicAttr)
+        paragraphStyle.lineSpacing = 1
         
-        // Remove the attributes, the issue goes away.
-        // Looks like the attributes "thinks" the node has a bigger size, so the text is centered in a bigger frame rather than its actual frame.
-        // Scroll down and up again(re-render the cell), the issue also goes away.
-//        topicTextNode.attributedString = NSAttributedString(string: "TEST")
+        let messageAttr: [String: AnyObject] = [NSFontAttributeName: messageFont, NSParagraphStyleAttributeName: paragraphStyle]
+        let testString = "This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. This is a long message. "
+        
+        topicTextNode.truncationAttributedString = NSAttributedString(string: "...", attributes: messageAttr)
+        topicTextNode.attributedString = NSAttributedString(string: testString, attributes: messageAttr)
+        topicTextNode.maximumNumberOfLines = 3
+        topicTextNode.flexShrink = true
 
         super.init()
 
@@ -67,7 +57,8 @@ class TestSubnode: ASDisplayNode {
     }
     
     override func layoutSpecThatFits(constrainedSize: ASSizeRange) -> ASLayoutSpec {
-        let topicStack = ASStackLayoutSpec(direction: .Vertical, spacing: 10, justifyContent: .Center, alignItems: .Center, children: [topicTextNode])
-        return topicStack
+        let topicStack = ASStackLayoutSpec(direction: .Horizontal, spacing: 10, justifyContent: .Center, alignItems: .Center, children: [topicTextNode])
+        let inset = ASInsetLayoutSpec(insets: UIEdgeInsets(top: 30, left: 30, bottom: 30, right: 30), child: topicStack)
+        return inset
     }
 }

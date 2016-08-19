@@ -1,10 +1,12 @@
-/* Copyright (c) 2014-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
+//
+//  ASControlNode.h
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 #import <AsyncDisplayKit/ASDisplayNode.h>
 
@@ -30,10 +32,20 @@ typedef NS_OPTIONS(NSUInteger, ASControlNodeEvent)
   ASControlNodeEventTouchUpOutside    = 1 << 5,
   /** A system event canceling the current touches for the control node. */
   ASControlNodeEventTouchCancel       = 1 << 6,
+  /** A system event when the Play/Pause button on the Apple TV remote is pressed. */
+  ASControlNodeEventPrimaryActionTriggered = 1 << 13,
+    
   /** All events, including system events. */
   ASControlNodeEventAllEvents         = 0xFFFFFFFF
 };
 
+typedef NS_OPTIONS(NSUInteger, ASControlState) {
+    ASControlStateNormal       = 0,
+    ASControlStateHighlighted  = 1 << 0,                  // used when ASControlNode isHighlighted is set
+    ASControlStateDisabled     = 1 << 1,
+    ASControlStateSelected     = 1 << 2,                  // used when ASControlNode isSelected is set
+    ASControlStateReserved     = 0xFF000000               // flags reserved for internal framework use
+};
 
 /**
   @abstract ASControlNode is the base class for control nodes (such as buttons), or nodes that track touches to invoke targets with action messages.
@@ -53,7 +65,13 @@ typedef NS_OPTIONS(NSUInteger, ASControlNodeEvent)
   @abstract Indicates whether or not the receiver is highlighted.
   @discussion This is set automatically when the there is a touch inside the control and removed on exit or touch up. This is different from touchInside in that it includes an area around the control, rather than just for touches inside the control.
  */
-@property (nonatomic, readonly, assign, getter=isHighlighted) BOOL highlighted;
+@property (nonatomic, assign, getter=isHighlighted) BOOL highlighted;
+
+/**
+ @abstract Indicates whether or not the receiver is highlighted.
+ @discussion This is set automatically when the receiver is tapped.
+ */
+@property (nonatomic, assign, getter=isSelected) BOOL selected;
 
 #pragma mark - Tracking Touches
 /**
@@ -106,7 +124,12 @@ typedef NS_OPTIONS(NSUInteger, ASControlNodeEvent)
   @param event The event which triggered these control actions. May be nil.
  */
 - (void)sendActionsForControlEvents:(ASControlNodeEvent)controlEvents withEvent:(nullable UIEvent *)event;
-
+#if TARGET_OS_TV
+/**
+ @abstract How the node looks when it isn't focused. Exposed here so that subclasses can override.
+ */
+- (void)setDefaultFocusAppearance;
+#endif
 @end
 
 NS_ASSUME_NONNULL_END

@@ -4,6 +4,6 @@
 use_frameworks!
 
 target 'ASTextNodeTest' do
-pod 'AsyncDisplayKit'
+pod 'AsyncDisplayKit', :git => 'https://github.com/facebook/AsyncDisplayKit', :branch => 'master'
 end
 
